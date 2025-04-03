@@ -6,7 +6,7 @@ class Test:
 
     def __init__(self):
         self.value = 1
-        self.lock = threading.Lock()
+        self.lock = mp.Lock()
 
     def update_value(self,value):
         self.value = value
@@ -28,8 +28,8 @@ if __name__ == '__main__':
 
     threads = []
     for _ in range(5):  # Limit the number of threads
-        t1 = threading.Thread(target=test.test, args=(50,))
-        t2 = threading.Thread(target=test.test, args=(100,))
+        t1 = mp.Process(target=test.test, args=(50,))
+        t2 = mp.Process(target=test.test, args=(100,))
         threads.append(t1)
         threads.append(t2)
 
