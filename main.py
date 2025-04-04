@@ -5,47 +5,50 @@ import threading
 
 class Test2:
 
-    def __init__(self,manager,lock):
-        self.value = manager.Value('i',1)
-        self.lock = lock
-        self.data = manager.Value('i',5)
+    def __init__(self,value,data):
+        self.value = value
+        self.data = data
+   
+    def to_dict(self):
+        return {"value": self.value, "data": self.data}
+
+    @classmethod
+    def from_dict(cls, data_dict):
+        return cls(data_dict["value"], data_dict["data"])
 
 
-    def print_value(self):
-        return self.value.value
-    
-    def update_value(self,value):
-        self.lock.acquire()
-        self.value.value = value
-        self.lock.release()
+def update_value(shared_dict, lock):
+    with lock:
+        obj = Test2.from_dict(dict(shared_dict))  # Convert shared_dict to an object
+        obj.value += 10
+        shared_dict.update(obj.to_dict())  # Save changes
 
 
-    def print_data(self):
-        return self.data.value
-    
-    def update_data(self,value):
-        self.data.value = value
-
+def print_values(shared_dict,lock):
+    with lock:
+        obj = Test2.from_dict(dict(shared_dict))
+        print(obj.value)
+        print(obj.data)
 class Test:
 
     def __init__(self,manager):
         self.value = manager.Value('i',1)
         self.lock = mp.Lock()
-        self.test2_instance = Test2(manager,self.lock)
+        self.test2_instance = manager.dict(Test2(1,5).to_dict())
 
 
     def test(self,id):
-        print(f'Old value {os.getpid()}: {self.test2_instance.print_value()}')
-        value = self.test2_instance.print_value()
-        self.test2_instance.update_value(value + 10)
-        print(f'New value {os.getpid()}: {self.test2_instance.print_value()}')
-        print(f'Old Data {os.getpid()}: {self.test2_instance.print_data()}')
-        data = self.test2_instance.print_data()
-        self.test2_instance.update_data(data + 10)
-        print(f'New value {os.getpid()}: {self.test2_instance.print_data()}')
+        print(f'Old PID {os.getpid()}')
+        print_values(self.test2_instance,lock=self.lock)
+        update_value(shared_dict=self.test2_instance,lock=self.lock)
+        print(f'New PID {os.getpid()}')
+        print_values(self.test2_instance,lock=self.lock)
+        
+        
 
 if __name__ == '__main__':
     with mp.Manager() as manager:
+        # t2_shared_instance = manager.dict(Test2(1,5).to_dict())
         test = Test(manager)
         threads = []
         print(mp.cpu_count())
